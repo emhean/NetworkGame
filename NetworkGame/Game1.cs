@@ -47,6 +47,7 @@ namespace NetworkGame
             };
 
             var server = new NetServer(Config);
+            
             this.NetServer = server;
 
             server.Start();
@@ -182,7 +183,7 @@ namespace NetworkGame
         }
 
 
-        public void ConnectToServer(string ip)
+        public void ConnectToServer(string ip, int port, string name)
         {
             this.Config = new NetPeerConfiguration("game");
             this.NetClient = new NetClient(Config);
@@ -191,7 +192,7 @@ namespace NetworkGame
 
             Console.WriteLine("Client started.");
 
-            this.NetConnection = NetClient.Connect(host: ip, port: 12345);
+            this.NetConnection = NetClient.Connect(host: ip, port:port);
 
             Connected = false;
             int i = 0;
@@ -229,6 +230,8 @@ namespace NetworkGame
         Texture2D tex;
         Rectangle sprite;
 
+        ServerForm serverForm;
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -239,14 +242,20 @@ namespace NetworkGame
 
         protected override void Initialize()
         {
-            server = new GameServer();
-            client = new GameClient();
+            serverForm = new ServerForm();
+            serverForm.Show();
 
-            server.StartServer();
+            serverForm.startServerBtn.Click += delegate (object o, EventArgs e)
+            {
+                server = new GameServer();
+                server.StartServer();
+            };
 
-            client.ConnectToServer("127.0.0.1");
-
-
+            serverForm.connectClientBtn.Click += delegate (object o, EventArgs e)
+            {
+                client = new GameClient();
+                client.ConnectToServer(serverForm.IP, int.Parse(serverForm.Port), serverForm.ClientName);
+            };
 
 
             camera = new Camera2DControlled();
@@ -281,9 +290,11 @@ namespace NetworkGame
             if (ks.IsKeyDown(Keys.Escape))
                 Exit();
 
+            if(client != null)
+                client.Update();
 
-            client.Update();
-            server.Update();
+            if(server != null)
+                server.Update();
 
             if (ks.IsKeyDown(Keys.W))
             {
@@ -345,12 +356,16 @@ namespace NetworkGame
             spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp, null, null, null, camera.GetTransformation(this.GraphicsDevice));
             // TODO: Add your drawing code here
 
-            foreach (NetEntity e in server.NetEntities)
+            if(server != null)
             {
-                spriteBatch.Draw(tex, e.pos, sprite, Color.White);
+                foreach (NetEntity e in server.NetEntities)
+                {
+                    spriteBatch.Draw(tex, e.pos, sprite, Color.White);
 
-                spriteBatch.DrawString(font, e.uuid.ToString(), e.pos - Vector2.One * 8, Color.Yellow);
+                    spriteBatch.DrawString(font, e.uuid.ToString(), e.pos - Vector2.One * 8, Color.Yellow);
+                }
             }
+            
 
             spriteBatch.End();
             base.Draw(gameTime);
